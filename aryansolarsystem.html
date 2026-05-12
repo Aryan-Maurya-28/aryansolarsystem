@@ -1,0 +1,2050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aryan's Solar System</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --star-gold: #FFD700;
+    --space-dark: #020409;
+    --nebula-blue: #0a0f2e;
+    --glow-purple: #7b2fff;
+    --text-white: #e8eaf6;
+    --text-muted: #8892b0;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--space-dark);
+    color: var(--text-white);
+    font-family: 'Exo 2', sans-serif;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    width: 12px; height: 12px;
+    border: 2px solid var(--star-gold);
+    border-radius: 50%;
+    position: fixed;
+    top: 0; left: 0;
+    pointer-events: none;
+    z-index: 9999;
+    transition: transform 0.1s;
+    mix-blend-mode: difference;
+  }
+  .cursor-trail {
+    width: 30px; height: 30px;
+    border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 50%;
+    position: fixed;
+    top: 0; left: 0;
+    pointer-events: none;
+    z-index: 9998;
+    transition: left 0.15s ease, top 0.15s ease;
+  }
+
+  /* Stars background */
+  #stars-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ====================== HERO SECTION ====================== */
+  #hero {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 1;
+  }
+
+  #solar-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+  }
+
+  .hero-title {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .hero-title h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(2rem, 6vw, 5rem);
+    font-weight: 900;
+    background: linear-gradient(135deg, #FFD700, #FF8C00, #FF4500);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    letter-spacing: 0.05em;
+    animation: titlePulse 3s ease-in-out infinite;
+  }
+
+  .hero-title p {
+    font-size: clamp(0.9rem, 2vw, 1.2rem);
+    color: rgba(200,220,255,0.7);
+    margin-top: 0.5rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    animation: fadeInUp 2s ease 0.5s both;
+  }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0.7;
+    animation: bounce 2s ease-in-out infinite;
+  }
+
+  .scroll-hint span {
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  .scroll-arrow {
+    width: 20px; height: 20px;
+    border-right: 2px solid var(--star-gold);
+    border-bottom: 2px solid var(--star-gold);
+    transform: rotate(45deg);
+  }
+
+  @keyframes titlePulse {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.3) drop-shadow(0 0 20px #FFD700); }
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(10px); }
+  }
+
+  /* ====================== PLANET SECTIONS ====================== */
+  .planet-section {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    padding: 4rem 2rem;
+    overflow: hidden;
+  }
+
+  .planet-section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at var(--glow-x, 50%) var(--glow-y, 50%), var(--glow-color, rgba(100,100,255,0.1)) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .planet-content {
+    display: flex;
+    align-items: center;
+    gap: 4rem;
+    max-width: 1100px;
+    width: 100%;
+    opacity: 0;
+    transform: translateY(60px);
+    transition: opacity 0.9s ease, transform 0.9s ease;
+  }
+
+  .planet-content.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .planet-content.reverse {
+    flex-direction: row-reverse;
+  }
+
+  .planet-3d-wrapper {
+    flex: 0 0 280px;
+    height: 280px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .planet-sphere {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    position: relative;
+    animation: planetFloat 4s ease-in-out infinite, planetSpin 20s linear infinite;
+    box-shadow: 
+      inset -30px -20px 40px rgba(0,0,0,0.7),
+      0 0 60px var(--planet-glow, rgba(100,100,255,0.4)),
+      0 0 120px var(--planet-glow, rgba(100,100,255,0.2));
+    overflow: hidden;
+  }
+
+  .planet-sphere::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.25) 0%, transparent 50%);
+  }
+
+  .planet-ring {
+    position: absolute;
+    width: 280px;
+    height: 60px;
+    border-radius: 50%;
+    border: 8px solid var(--ring-color, rgba(200,180,100,0.5));
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotateX(75deg);
+    box-shadow: 0 0 20px var(--ring-color, rgba(200,180,100,0.3));
+  }
+
+  .planet-orbit-ring {
+    position: absolute;
+    width: 260px;
+    height: 260px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.08);
+    animation: orbitRingPulse 3s ease-in-out infinite;
+  }
+
+  @keyframes planetFloat {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-15px); }
+  }
+
+  @keyframes planetSpin {
+    from { filter: hue-rotate(0deg); }
+    to { filter: hue-rotate(360deg); }
+  }
+
+  @keyframes orbitRingPulse {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.05); }
+  }
+
+  .planet-info {
+    flex: 1;
+  }
+
+  .planet-number {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.3em;
+    color: var(--planet-accent, #888);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+    opacity: 0.7;
+  }
+
+  .planet-name {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 1rem;
+    color: var(--planet-accent, white);
+    text-shadow: 0 0 30px var(--planet-glow, transparent);
+    letter-spacing: 0.05em;
+  }
+
+  .planet-subtitle {
+    font-size: 0.85rem;
+    letter-spacing: 0.2em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    opacity: 0.8;
+  }
+
+  .planet-divider {
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(to right, var(--planet-accent, white), transparent);
+    margin-bottom: 1.5rem;
+  }
+
+  .planet-description {
+    font-size: 1rem;
+    line-height: 1.8;
+    color: rgba(200,220,255,0.85);
+    margin-bottom: 1.5rem;
+  }
+
+  .planet-stats {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  .stat-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--planet-accent, white);
+  }
+
+  /* Special: funny/romantic card for Rajni */
+  .love-card {
+    background: linear-gradient(135deg, rgba(255,50,100,0.15), rgba(255,100,150,0.08));
+    border: 1px solid rgba(255,80,120,0.4);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-top: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .love-card::before {
+    content: '💫';
+    position: absolute;
+    top: -10px; right: -10px;
+    font-size: 3rem;
+    opacity: 0.2;
+    animation: heartBeat 2s ease-in-out infinite;
+  }
+
+  @keyframes heartBeat {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+  }
+
+  .love-card-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    color: #ff6b9d;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+
+  .love-card p {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: rgba(255,180,200,0.9);
+    font-style: italic;
+  }
+
+  /* ====================== SUN SECTION ====================== */
+  #aryan-star {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    padding: 4rem 2rem;
+    overflow: hidden;
+  }
+
+  .sun-glow-bg {
+    position: absolute;
+    width: 800px;
+    height: 800px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,200,0,0.15) 0%, rgba(255,100,0,0.08) 40%, transparent 70%);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    animation: sunPulseGlow 4s ease-in-out infinite;
+  }
+
+  @keyframes sunPulseGlow {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+    50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+  }
+
+  .sun-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    max-width: 800px;
+    opacity: 0;
+    transform: scale(0.9);
+    transition: opacity 1s ease, transform 1s ease;
+  }
+
+  .sun-content.visible {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .sun-sphere {
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #fff7aa, #FFD700 30%, #FF8C00 60%, #FF4500 85%, #c02000);
+    margin: 0 auto 3rem;
+    position: relative;
+    animation: sunRotate 10s linear infinite;
+    box-shadow:
+      0 0 40px rgba(255,200,0,0.8),
+      0 0 80px rgba(255,150,0,0.6),
+      0 0 160px rgba(255,100,0,0.4),
+      0 0 300px rgba(255,50,0,0.2);
+  }
+
+  .sun-sphere::before {
+    content: '';
+    position: absolute;
+    inset: -20px;
+    border-radius: 50%;
+    background: radial-gradient(circle, transparent 45%, rgba(255,200,0,0.15) 60%, transparent 75%);
+    animation: coronaRotate 8s linear infinite reverse;
+  }
+
+  .sun-flare {
+    position: absolute;
+    width: 4px;
+    background: linear-gradient(to top, #FFD700, transparent);
+    border-radius: 2px;
+    transform-origin: bottom center;
+    animation: flareAnim 3s ease-in-out infinite;
+  }
+
+  @keyframes sunRotate {
+    from { filter: hue-rotate(0deg) brightness(1); }
+    to { filter: hue-rotate(20deg) brightness(1.05); }
+  }
+
+  @keyframes coronaRotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes flareAnim {
+    0%, 100% { transform: rotate(var(--angle)) scaleY(1); opacity: 0.6; }
+    50% { transform: rotate(var(--angle)) scaleY(1.5); opacity: 1; }
+  }
+
+  .aryan-star-name {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(2.5rem, 7vw, 5rem);
+    font-weight: 900;
+    background: linear-gradient(135deg, #fff7aa, #FFD700, #FF8C00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+
+  .aryan-star-sub {
+    font-size: 1rem;
+    letter-spacing: 0.3em;
+    color: rgba(255,200,100,0.6);
+    text-transform: uppercase;
+    margin-bottom: 2rem;
+  }
+
+  .aryan-star-desc {
+    font-size: 1.05rem;
+    line-height: 1.9;
+    color: rgba(255,230,150,0.8);
+    max-width: 650px;
+    margin: 0 auto 2rem;
+  }
+
+  /* ====================== FICTIONAL SYSTEM FINALE ====================== */
+  #fictional-system {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    padding: 4rem 2rem;
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .finale-title {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1.5rem, 4vw, 3rem);
+    font-weight: 900;
+    background: linear-gradient(135deg, #b388ff, #7c4dff, #651fff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 1rem;
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+
+  .finale-title.visible { opacity: 1; transform: translateY(0); }
+
+  .fictional-canvas-wrap {
+    width: 100%;
+    max-width: 900px;
+    height: 500px;
+    position: relative;
+    margin: 2rem auto;
+    opacity: 0;
+    transition: opacity 1s ease 0.3s;
+  }
+
+  .fictional-canvas-wrap.visible { opacity: 1; }
+
+  #fictional-canvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 20px;
+    border: 1px solid rgba(123,47,255,0.3);
+    background: radial-gradient(ellipse at 50% 50%, rgba(20,10,40,0.95), rgba(2,4,9,0.98));
+    box-shadow: 0 0 60px rgba(123,47,255,0.2), inset 0 0 80px rgba(0,0,0,0.5);
+  }
+
+  .planet-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    opacity: 0;
+    transition: opacity 1s ease 0.6s;
+  }
+
+  .planet-legend.visible { opacity: 1; }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+  }
+
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+
+  .welcome-text {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1rem, 2.5vw, 1.5rem);
+    color: rgba(200,170,255,0.8);
+    letter-spacing: 0.15em;
+    margin-top: 2rem;
+    opacity: 0;
+    transition: opacity 1s ease 0.9s;
+  }
+
+  .welcome-text.visible { opacity: 1; }
+
+  /* ====================== HOROSCOPE SECTION ====================== */
+  #horoscope {
+    position: relative;
+    z-index: 2;
+    padding: 5rem 2rem;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .horoscope-header {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.9s ease, transform 0.9s ease;
+  }
+  .horoscope-header.visible { opacity: 1; transform: translateY(0); }
+
+  .horoscope-eyebrow {
+    font-size: 0.72rem;
+    letter-spacing: 0.35em;
+    color: rgba(200,180,255,0.5);
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+
+  .horoscope-title {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1.8rem, 5vw, 3.2rem);
+    font-weight: 900;
+    background: linear-gradient(135deg, #e8d5ff, #b388ff, #7c4dff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.75rem;
+  }
+
+  .horoscope-tagline {
+    font-size: 0.9rem;
+    color: rgba(180,160,220,0.6);
+    margin-bottom: 3.5rem;
+    letter-spacing: 0.1em;
+  }
+
+  /* Constellation picker */
+  .sign-picker {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+    max-width: 800px;
+    margin: 0 auto 3rem;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s;
+  }
+  .sign-picker.visible { opacity: 1; transform: translateY(0); }
+
+  .sign-btn {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 50px;
+    padding: 0.55rem 1.2rem;
+    cursor: pointer;
+    font-family: 'Exo 2', sans-serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    color: rgba(200,190,230,0.7);
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .sign-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    background: var(--btn-glow, rgba(180,130,255,0.15));
+  }
+
+  .sign-btn:hover::before, .sign-btn.active::before { opacity: 1; }
+  .sign-btn:hover, .sign-btn.active {
+    border-color: var(--btn-border, rgba(180,130,255,0.5));
+    color: var(--btn-color, #d4b8ff);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px var(--btn-shadow, rgba(120,60,255,0.2));
+  }
+  .sign-btn .sign-icon { margin-right: 0.4rem; font-size: 1rem; }
+
+  /* Reading card */
+  .horoscope-card-wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    opacity: 0;
+    transform: scale(0.96);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .horoscope-card-wrap.revealed { opacity: 1; transform: scale(1); }
+
+  .horoscope-card {
+    background: linear-gradient(135deg, rgba(30,15,60,0.9), rgba(15,8,30,0.95));
+    border: 1px solid rgba(180,130,255,0.25);
+    border-radius: 20px;
+    padding: 2.5rem;
+    position: relative;
+    overflow: hidden;
+    text-align: left;
+    box-shadow: 0 0 60px rgba(100,50,200,0.1), inset 0 0 40px rgba(0,0,0,0.3);
+  }
+
+  .horoscope-card::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--card-glow, rgba(120,60,255,0.2)), transparent 70%);
+    pointer-events: none;
+    animation: cardGlowPulse 4s ease-in-out infinite;
+  }
+
+  @keyframes cardGlowPulse {
+    0%, 100% { transform: scale(1); opacity: 0.6; }
+    50% { transform: scale(1.2); opacity: 1; }
+  }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin-bottom: 1.75rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .card-planet-orb {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    position: relative;
+    box-shadow: 0 0 24px var(--orb-glow, rgba(120,60,255,0.5));
+    animation: orbFloat 3s ease-in-out infinite;
+  }
+  .card-planet-orb::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.3), transparent 55%);
+  }
+
+  @keyframes orbFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+
+  .card-heading { flex: 1; }
+  .card-sign-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--card-accent, #b388ff);
+    line-height: 1.1;
+    margin-bottom: 0.3rem;
+  }
+  .card-sign-sub {
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    color: rgba(180,160,220,0.5);
+    text-transform: uppercase;
+  }
+
+  .horoscope-date {
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    color: rgba(180,160,220,0.4);
+    text-align: right;
+    margin-bottom: 1.25rem;
+    text-transform: uppercase;
+  }
+
+  .horoscope-reading {
+    font-size: 0.98rem;
+    line-height: 1.95;
+    color: rgba(210,200,240,0.88);
+    margin-bottom: 1.5rem;
+  }
+
+  /* Cosmic meter bars */
+  .cosmic-meters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  @media (max-width: 500px) { .cosmic-meters { grid-template-columns: 1fr; } }
+
+  .meter-row { display: flex; flex-direction: column; gap: 0.3rem; }
+  .meter-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.15em;
+    color: rgba(160,140,200,0.6);
+    text-transform: uppercase;
+  }
+  .meter-bar-bg {
+    height: 4px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .meter-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--card-accent, #b388ff);
+    width: 0%;
+    transition: width 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+    box-shadow: 0 0 8px var(--card-accent, #b388ff);
+  }
+
+  /* Lucky stars row */
+  .lucky-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .lucky-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .lucky-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    color: rgba(160,140,200,0.5);
+    text-transform: uppercase;
+  }
+  .lucky-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--card-accent, #b388ff);
+  }
+
+  /* Constellation SVG canvas */
+  .constellation-wrap {
+    position: absolute;
+    top: 1rem; right: 1.5rem;
+    width: 80px; height: 80px;
+    opacity: 0.25;
+  }
+
+  /* ====================== SECTION DIVIDERS ====================== */
+  .space-divider {
+    position: relative;
+    height: 80px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .divider-line {
+    width: 80%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent);
+    position: relative;
+  }
+
+  .divider-star {
+    width: 6px; height: 6px;
+    background: var(--star-gold);
+    border-radius: 50%;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 0 10px var(--star-gold);
+    animation: starTwinkle 2s ease-in-out infinite;
+  }
+
+  @keyframes starTwinkle {
+    0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+    50% { opacity: 0.3; transform: translateX(-50%) scale(0.5); }
+  }
+
+  /* ====================== RESPONSIVE ====================== */
+  @media (max-width: 768px) {
+    .planet-content, .planet-content.reverse {
+      flex-direction: column;
+      gap: 2rem;
+      text-align: center;
+    }
+    .planet-stats { justify-content: center; }
+    .planet-divider { margin: 0 auto 1.5rem; }
+    .planet-3d-wrapper { flex: 0 0 200px; height: 200px; }
+    .planet-sphere { width: 150px; height: 150px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-trail" id="cursor-trail"></div>
+<canvas id="stars-canvas"></canvas>
+
+<!-- =================== HERO =================== -->
+<section id="hero">
+  <canvas id="solar-canvas"></canvas>
+  <div class="hero-title">
+    <h1>The Solar System</h1>
+    <p>Our Cosmic Home &nbsp;·&nbsp; 8 Worlds &nbsp;·&nbsp; One Star</p>
+  </div>
+  <div class="scroll-hint">
+    <span>Scroll to Explore</span>
+    <div class="scroll-arrow"></div>
+  </div>
+</section>
+
+<div class="space-divider"><div class="divider-line"><div class="divider-star"></div></div></div>
+
+<!-- =================== MERCURY =================== -->
+<section class="planet-section" style="--glow-x:20%; --glow-y:50%; --glow-color:rgba(180,140,100,0.12);">
+  <div class="planet-content" id="mercury-content">
+    <div class="planet-3d-wrapper">
+      <div class="planet-orbit-ring"></div>
+      <div class="planet-sphere" style="background: radial-gradient(circle at 40% 35%, #c8b8a0, #a09080 40%, #6e5c4e 70%, #3d3028); --planet-glow: rgba(180,140,100,0.5);"></div>
+    </div>
+    <div class="planet-info">
+      <div class="planet-number">Planet I · Innermost</div>
+      <div class="planet-name" style="--planet-accent: #c8a87a; --planet-glow: rgba(200,168,122,0.5);">Mercury</div>
+      <div class="planet-subtitle">The Swift Messenger</div>
+      <div class="planet-divider" style="background: linear-gradient(to right, #c8a87a, transparent);"></div>
+      <div class="planet-description">
+        The smallest planet in our solar system and the closest to the Sun. Mercury races around the Sun every 88 Earth days — hence its name after the fleet-footed Roman messenger god. Its surface is heavily cratered, resembling Earth's Moon, with temperatures swinging from −180°C at night to 430°C during the day.
+      </div>
+      <div class="planet-stats">
+        <div class="stat-item">
+          <span class="stat-label">Distance from Sun</span>
+          <span class="stat-value" style="color:#c8a87a;">57.9M km</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Orbital Period</span>
+          <span class="stat-value" style="color:#c8a87a;">88 days</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Moons</span>
+          <span class="stat-value" style="color:#c8a87a;">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="space-divider"><div class="divider-line"><div class="divider-star"></div></div></div>
+
+<!-- =================== VENUS =================== -->
+<section class="planet-section" style="--glow-x:80%; --glow-y:50%; --glow-color:rgba(255,200,100,0.12);">
+  <div class="planet-content reverse" id="venus-content">
+    <div class="planet-3d-wrapper">
+      <div class="planet-orbit-ring"></div>
+      <div class="planet-sphere" style="background: radial-gradient(circle at 40% 35%, #fff5c8, #f0d060 35%, #d4a030 65%, #8a5010); --planet-glow: rgba(255,210,80,0.5);"></div>
+    </div>
+    <div class="planet-info">
+      <div class="planet-number">Planet II · Hottest</div>
+      <div class="planet-name" style="--planet-accent: #f0c842; --planet-glow: rgba(240,200,66,0.5);">Venus</div>
+      <div class="planet-subtitle">Earth's Evil Twin</div>
+      <div class="planet-divider" style="background: linear-gradient(to right, #f0c842, transparent);"></div>
+      <div class="planet-description">
+        Often called Earth's twin due to similar size, Venus is actually our solar system's hottest planet with surface temperatures reaching 465°C — hot enough to melt lead. Its thick atmosphere of carbon dioxide creates a runaway greenhouse effect, and it rotates so slowly that a day on Venus is longer than its year.
+      </div>
+      <div class="planet-stats">
+        <div class="stat-item">
+          <span class="stat-label">Distance from Sun</span>
+          <span class="stat-value" style="color:#f0c842;">108.2M km</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Surface Temp</span>
+          <span class="stat-value" style="color:#f0c842;">465°C</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Moons</span>
+          <span class="stat-value" style="color:#f0c842;">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="space-divider"><div class="divider-line"><div class="divider-star"></div></div></div>
+
+<!-- =================== EARTH =================== -->
+<section class="planet-section" style="--glow-x:25%; --glow-y:50%; --glow-color:rgba(50,150,255,0.12);">
+  <div class="planet-content" id="earth-content">
+    <div class="planet-3d-wrapper">
+      <div class="planet-orbit-ring"></div>
+      <div class="planet-sphere" style="background: radial-gradient(circle at 40% 35%, #a0e0ff, #2080d0 30%, #1a6040 55%, #0a4020 75%, #1a6040); --planet-glow: rgba(50,150,255,0.5);"></div>
+    </div>
+    <div class="planet-info">
+      <div class="planet-number">Planet III · Our Home</div>
+      <div class="planet-name" style="--planet-accent: #4db8ff; --planet-glow: rgba(77,184,255,0.5);">Earth</div>
+      <div class="planet-subtitle">The Blue Marble</div>
+      <div class="planet-divider" style="background: linear-gradient(to right, #4db8ff, transparent);"></div>
+      <div class="planet-description">
+        The only known planet in the universe to harbour life. Earth's liquid water, protective atmosphere, and magnetic field create the perfect conditions for billions of species to thrive. Our planet's biodiversity is astonishing — from the deepest ocean trenches to the highest mountain peaks, life finds a way.
+      </div>
+      <div class="planet-stats">
+        <div class="stat-item">
+          <span class="stat-label">Distance from Sun</span>
+          <span class="stat-value" style="color:#4db8ff;">149.6M km</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Orbital Period</span>
+          <span class="stat-value" style="color:#4db8ff;">365.25 days</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Moons</span>
+          <span class="stat-value" style="color:#4db8ff;">1</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="space-divider"><div class="divider-line"><div class="divider-star"></div></div></div>
+
+<!-- =================== MARS =================== -->
+<section class="planet-section" style="--glow-x:75%; --glow-y:50%; --glow-color:rgba(255,80,40,0.12);">
+  <div class="planet-content reverse" id="mars-content">
+    <div class="planet-3d-wrapper">
+      <div class="planet-orbit-ring"></div>
+      <div class="planet-sphere" style="background: radial-gradient(circle at 40% 35%, #ff9980, #e05030 35%, #a03020 65%, #601810); --planet-glow: rgba(220,70,30,0.5);"></div>
+    </div>
+    <div class="planet-info">
+      <div class="planet-number">Planet IV · The Red One</div>
+      <div class="planet-name" style="--planet-accent: #ff6644; --planet-glow: rgba(255,102,68,0.5);">Mars</div>
+      <div class="planet-subtitle">God of War</div>
+      <div class="planet-divider" style="background: linear-gradient(to right, #ff6644, transparent);"></div>
+      <div class="planet-description">
+        Mars is the most explored planet beyond Earth, home to the solar system's largest volcano — Olympus Mons — and the longest canyon system — Valles Marineris. Its red hue comes from iron oxide (rust) on the surface. Scientists believe Mars once had rivers, oceans, and possibly life billions of years ago.
+      </div>
+      <div class="planet-stats">
+        <div class="stat-item">
+          <span class="stat-label">Distance from Sun</span>
+          <span class="stat-value" style="color:#ff6644;">227.9M km</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Orbital Period</span>
+          <span class="stat-value" style="color:#ff6644;">687 days</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Moons</span>
+          <span class="stat-value" style="color:#ff6644;">2</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="space-divider"><div class="divider-line"><div class="divider-star"></div></div></div>
+
+<!-- =================== JUPITER =================== -->
+<section class="planet-section" style="--glow-x:30%; --glow-y:50%; --glow-color:rgba(220,160,80,0.12);">
+  <div class="planet-content" id="jupiter-content">
+    <div class="planet-3d-wrapper">
+      <div class="planet-orbit-ring"></div>
+      <div class="planet-sphere" style="width:240px; height:240px; background: repeating-linear-gradient(180deg, #c8a870 0%, #a07840 8%, #d4b890 16%, #e8c890 24%, #a08050 32%, #c8a870 40%, #d4b080 48%, #b89060 56%, #e0c0a0 64%, #a08050 72%, #c09060 80%, #d4b080 88%, #c8a870 100%); --planet-glow: rgba(220,180,100,0.5);"></div>
+    </div>
+    <div class="planet-info">
+      <div class="planet-number">Planet V · The Giant</div>
+      <div class="planet-name" style="--planet-accent: #e8c088; --planet-glow: rgba(232,192,136,0.5);">Jupiter</div>
+      <div class="planet-subtitle">King of Planets</div>
+      <div class="planet-divider" style="background: linear-gradient(to right, #e8c088, transparent);"></div>
+      <div class="planet-description">
+        The largest planet in our solar system — so massive that all other planets could fit inside it with room to spare. Jupiter's Great Red Spot is a storm that has been raging for over 350 years. It has 95 known moons, including Europa which may harbor a subsurface ocean with potential for life.
+      </div>
+      <div class="planet-stats">
+        <div class="stat-item">
+          <span class="stat-label">Distance from Sun</span>
+          <span class="stat-value" style="color:#e8c088;">778.5M km</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Orbital Period</span>
+          <span class="stat-value" style="color:#e8c088;">11.9 years</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Moons</span>
+          <span class="stat-value" style="color:#e8c088;">95</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="space-divider"><div class="divider-line"><div class="divider-star"></div></div></div>
+
+<!-- =================== SATURN =================== -->
+<section class="planet-section" style="--glow-x:70%; --glow-y:50%; --glow-color:rgba(200,180,120,0.12);">
+  <div class="planet-content reverse" id="saturn-content">
+    <div class="planet-3d-wrapper">
+      <div class="planet-orbit-ring" style="--ring-color: rgba(210,185,140,0.6);"></div>
+      <div class="planet-sphere" style="background: radial-gradient(circle at 40% 35%, #fff0d0, #d4c090 35%, #b0a070 65%, #806040); --planet-glow: rgba(200,180,120,0.5);"></div>
+      <div class="planet-ring" style="--ring-color: rgba(210,185,140,0.5);"></div>
+    </div>
+    <div class="planet-info">
+      <div class="planet-number">Planet VI · The Ringed</div>
+      <div class="planet-name" style="--planet-accent: #d4c090; --planet-glow: rgba(212,192,144,0.5);">Saturn</div>
+      <div class="planet-subtitle">Lord of the Rings</div>
+      <div class="planet-divider" style="background: linear-gradient(to right, #d4c090, transparent);"></div>
+      <div class="planet-description">
+        Saturn is the crown jewel of our solar system — its spectacular ring system stretches 282,000 km wide yet is barely 1 km thick. The rings are made of billions of ice chunks and rocks. Saturn is so low-density that it would float in water, making it the only planet in our solar system lighter than water.
+      </div>
+      <div class="planet-stats">
+        <div class="stat-item">
+          <span class="stat-label">Distance from Sun</span>
+          <span class="stat-value" style="color:#d4c090;">1.43B km</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Orbital Period</span>
+          <span class="stat-value" style="color:#d4c090;">29.5 years</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Moons</span>
+          <span class="stat-value" style="color:#d4c090;">146</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="space-divider"><div class="divider-line"><div class="divider-star"></div></div></div>
+
+<!-- =================== URANUS =================== -->
+<section class="planet-section" style="--glow-x:25%; --glow-y:50%; --glow-color:rgba(100,220,220,0.12);">
+  <div class="planet-content" id="uranus-content">
+    <div class="planet-3d-wrapper">
+      <div class="planet-orbit-ring"></div>
+      <div class="planet-sphere" style="background: radial-gradient(circle at 40% 35%, #d0ffff, #70d8d8 35%, #40b0b8 65%, #208898); --planet-glow: rgba(80,200,210,0.5);"></div>
+    </div>
+    <div class="planet-info">
+      <div class="planet-number">Planet VII · The Tilted</div>
+      <div class="planet-name" style="--planet-accent: #70d8d8; --planet-glow: rgba(112,216,216,0.5);">Uranus</div>
+      <div class="planet-subtitle">The Sideways Planet</div>
+      <div class="planet-divider" style="background: linear-gradient(to right, #70d8d8, transparent);"></div>
+      <div class="planet-description">
+        Uranus rolls around the Sun on its side — its axis is tilted at 98 degrees, meaning it orbits like a bowling ball. This gives Uranus the most extreme seasons in the solar system, where each pole experiences 42 years of continuous sunlight followed by 42 years of darkness. It's an ice giant made mostly of water, methane, and ammonia ice.
+      </div>
+      <div class="planet-stats">
+        <div class="stat-item">
+          <span class="stat-label">Distance from Sun</span>
+          <span class="stat-value" style="color:#70d8d8;">2.87B km</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Orbital Period</span>
+          <span class="stat-value" style="color:#70d8d8;">84 years</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Moons</span>
+          <span class="stat-value" style="color:#70d8d8;">28</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="space-divider"><div class="divider-line"><div class="divider-star"></div></div></div>
+
+<!-- =================== NEPTUNE =================== -->
+<section class="planet-section" style="--glow-x:75%; --glow-y:50%; --glow-color:rgba(50,80,255,0.12);">
+  <div class="planet-content reverse" id="neptune-content">
+    <div class="planet-3d-wrapper">
+      <div class="planet-orbit-ring"></div>
+      <div class="planet-sphere" style="background: radial-gradient(circle at 40% 35%, #a0c0ff, #3060d0 35%, #1840a0 65%, #0c2060); --planet-glow: rgba(60,120,255,0.5);"></div>
+    </div>
+    <div class="planet-info">
+      <div class="planet-number">Planet VIII · The Farthest</div>
+      <div class="planet-name" style="--planet-accent: #4488ff; --planet-glow: rgba(68,136,255,0.5);">Neptune</div>
+      <div class="planet-subtitle">God of the Sea</div>
+      <div class="planet-divider" style="background: linear-gradient(to right, #4488ff, transparent);"></div>
+      <div class="planet-description">
+        The most distant planet in our solar system and the windiest — winds on Neptune reach speeds of over 2,100 km/h, the fastest in the solar system. Its vivid blue colour comes from methane in its atmosphere absorbing red light. Neptune has only been visited by one spacecraft — Voyager 2 — which flew past in 1989.
+      </div>
+      <div class="planet-stats">
+        <div class="stat-item">
+          <span class="stat-label">Distance from Sun</span>
+          <span class="stat-value" style="color:#4488ff;">4.5B km</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Orbital Period</span>
+          <span class="stat-value" style="color:#4488ff;">165 years</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Moons</span>
+          <span class="stat-value" style="color:#4488ff;">16</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="space-divider"><div class="divider-line"><div class="divider-star"></div></div></div>
+
+<!-- =================== ARYAN STAR =================== -->
+<section id="aryan-star">
+  <div class="sun-glow-bg"></div>
+  <div class="sun-content" id="aryan-content">
+    <div class="sun-sphere" id="sun-sphere"></div>
+    <div class="aryan-star-name">☀ Aryan Star</div>
+    <div class="aryan-star-sub">The Heart of a Fictional Universe</div>
+    <div class="aryan-star-desc">
+      A blazing G-type yellow dwarf of mythic proportions, the Aryan Star burns at the centre of its own personal universe — warm, magnetic, and impossible to ignore. Scientists theorize that its gravitational pull doesn't just capture planets... it captures hearts. Every planet in this system owes its existence, its orbit, and honestly its whole personality to this one gloriously radiant star.
+    </div>
+    <div class="planet-stats" style="justify-content:center; gap:2.5rem;">
+      <div class="stat-item" style="align-items:center;">
+        <span class="stat-label">Temperature</span>
+        <span class="stat-value" style="color:#FFD700;">∞ Warmth</span>
+      </div>
+      <div class="stat-item" style="align-items:center;">
+        <span class="stat-label">Mass</span>
+        <span class="stat-value" style="color:#FFD700;">Legendary</span>
+      </div>
+      <div class="stat-item" style="align-items:center;">
+        <span class="stat-label">Planets</span>
+        <span class="stat-value" style="color:#FFD700;">6 Beloved</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="space-divider"><div class="divider-line"><div class="divider-star"></div></div></div>
+
+<!-- =================== FICTIONAL: RAJNI =================== -->
+<section class="planet-section" style="--glow-x:30%; --glow-y:50%; --glow-color:rgba(255,80,150,0.15);">
+  <div class="planet-content" id="rajni-content">
+    <div class="planet-3d-wrapper">
+      <div class="planet-orbit-ring"></div>
+      <div class="planet-sphere" style="background: radial-gradient(circle at 40% 35%, #ffb8d8, #ff6090 30%, #e03068 60%, #a01040); --planet-glow: rgba(255,80,140,0.6);"></div>
+    </div>
+    <div class="planet-info">
+      <div class="planet-number">Fictional Planet I · Closest</div>
+      <div class="planet-name" style="--planet-accent: #ff6090; --planet-glow: rgba(255,96,144,0.6);">Rajni</div>
+      <div class="planet-subtitle">The Romantic Neighbour</div>
+      <div class="planet-divider" style="background: linear-gradient(to right, #ff6090, transparent);"></div>
+      <div class="planet-description">
+        Rajni is the closest planet to the Aryan Star — and honestly, scientists say it got that position by sheer determination. It simply refused to orbit anywhere else.
+      </div>
+      <div class="love-card">
+        <div class="love-card-title">💕 Classified Transmission from Planet Rajni</div>
+        <p>
+          "Dear Aryan Star, every morning when your rays hit my surface, my volcanoes erupt — and honestly that's just my heart doing its thing. 
+          Scientists call it 'tidal heating.' I call it love. I orbit you 365 times a year not because gravity says so, but because I choose to. 
+          Also I may have rearranged all my mountain ranges to spell 'Aryan' but that's between me and the satellites. 
+          P.S. — I've been warming up my atmosphere specifically so you'd notice. It's working, right? 🌋❤️"
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="space-divider"><div class="divider-line"><div class="divider-star"></div></div></div>
+
+<!-- =================== FICTIONAL: RAHUL =================== -->
+<section class="planet-section" style="--glow-x:70%; --glow-y:50%; --glow-color:rgba(80,180,255,0.12);">
+  <div class="planet-content reverse" id="rahul-content">
+    <div class="planet-3d-wrapper">
+      <div class="planet-orbit-ring"></div>
+      <div class="planet-sphere" style="background: radial-gradient(circle at 40% 35%, #a0d8ff, #3088e0 35%, #1060b0 65%, #082050); --planet-glow: rgba(60,140,255,0.5);"></div>
+    </div>
+    <div class="planet-info">
+      <div class="planet-number">Fictional Planet II</div>
+      <div class="planet-name" style="--planet-accent: #50a8ff; --planet-glow: rgba(80,168,255,0.5);">Rahul</div>
+      <div class="planet-subtitle">The Cool Blue World</div>
+      <div class="planet-divider" style="background: linear-gradient(to right, #50a8ff, transparent);"></div>
+      <div class="planet-description">
+        Planet Rahul is known for its remarkably chill atmosphere — literally. Surface temperatures hover at a consistent "relaxed" level. Its inhabitants are reportedly the most laid-back beings in the known fictional universe, famous for solving complex problems by simply waiting for them to go away on their own. Scientists have awarded it the title: "Most Likely to Say 'It's Fine, Don't Worry.'"
+      </div>
+      <div class="planet-stats">
+        <div class="stat-item">
+          <span class="stat-label">Vibe</span>
+          <span class="stat-value" style="color:#50a8ff;">Ultra Chill</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Specialty</span>
+          <span class="stat-value" style="color:#50a8ff;">Napping</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="space-divider"><div class="divider-line"><div class="divider-star"></div></div></div>
+
+<!-- =================== FICTIONAL: PALAV =================== -->
+<section class="planet-section" style="--glow-x:30%; --glow-y:50%; --glow-color:rgba(100,220,120,0.12);">
+  <div class="planet-content" id="palav-content">
+    <div class="planet-3d-wrapper">
+      <div class="planet-orbit-ring"></div>
+      <div class="planet-sphere" style="background: radial-gradient(circle at 40% 35%, #c0ffd0, #40c860 35%, #20a040 65%, #0a5020); --planet-glow: rgba(60,200,80,0.5);"></div>
+    </div>
+    <div class="planet-info">
+      <div class="planet-number">Fictional Planet III</div>
+      <div class="planet-name" style="--planet-accent: #50d870; --planet-glow: rgba(80,216,112,0.5);">Palav</div>
+      <div class="planet-subtitle">The Lush Green World</div>
+      <div class="planet-divider" style="background: linear-gradient(to right, #50d870, transparent);"></div>
+      <div class="planet-description">
+        Palav is entirely covered in the most magnificent jungle ecosystem in the galaxy. The planet produces 3,000% more oxygen than it needs, which explains why every visiting alien immediately feels a strange urge to open a wellness retreat. Its inhabitants have 47 different words for "leaf" and take it personally when anyone doesn't appreciate nature. They are also responsible for the universe's best fictional biryani — made entirely from cosmic herbs.
+      </div>
+      <div class="planet-stats">
+        <div class="stat-item">
+          <span class="stat-label">Signature Export</span>
+          <span class="stat-value" style="color:#50d870;">Cosmic Herbs</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Vibe</span>
+          <span class="stat-value" style="color:#50d870;">Very Green</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="space-divider"><div class="divider-line"><div class="divider-star"></div></div></div>
+
+<!-- =================== FICTIONAL: REYNOLD =================== -->
+<section class="planet-section" style="--glow-x:70%; --glow-y:50%; --glow-color:rgba(255,160,50,0.12);">
+  <div class="planet-content reverse" id="reynold-content">
+    <div class="planet-3d-wrapper">
+      <div class="planet-orbit-ring"></div>
+      <div class="planet-sphere" style="background: radial-gradient(circle at 40% 35%, #ffd890, #e08820 35%, #b05010 65%, #602000); --planet-glow: rgba(220,140,40,0.5);"></div>
+    </div>
+    <div class="planet-info">
+      <div class="planet-number">Fictional Planet IV</div>
+      <div class="planet-name" style="--planet-accent: #f0a030; --planet-glow: rgba(240,160,48,0.5);">Reynold</div>
+      <div class="planet-subtitle">The Bold & Fiery World</div>
+      <div class="planet-divider" style="background: linear-gradient(to right, #f0a030, transparent);"></div>
+      <div class="planet-description">
+        Reynold is the most dramatically theatrical planet in the system. Its sunsets last exactly 3 hours and are widely considered the most extra thing in the fictional cosmos. Its inhabitants make every single entrance accompanied by their own personal wind (they installed the machines themselves). Reynold once declared war on a neighbouring asteroid simply because it "looked at us funny." Peace was restored when someone offered snacks.
+      </div>
+      <div class="planet-stats">
+        <div class="stat-item">
+          <span class="stat-label">Drama Level</span>
+          <span class="stat-value" style="color:#f0a030;">Maximum</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Sunsets per Year</span>
+          <span class="stat-value" style="color:#f0a030;">All of Them</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="space-divider"><div class="divider-line"><div class="divider-star"></div></div></div>
+
+<!-- =================== FICTIONAL: HEENA =================== -->
+<section class="planet-section" style="--glow-x:30%; --glow-y:50%; --glow-color:rgba(200,100,220,0.12);">
+  <div class="planet-content" id="heena-content">
+    <div class="planet-3d-wrapper">
+      <div class="planet-orbit-ring"></div>
+      <div class="planet-sphere" style="background: radial-gradient(circle at 40% 35%, #f0c8ff, #c060e0 35%, #9030c0 65%, #501080); --planet-glow: rgba(180,80,220,0.5);"></div>
+    </div>
+    <div class="planet-info">
+      <div class="planet-number">Fictional Planet V</div>
+      <div class="planet-name" style="--planet-accent: #c070e8; --planet-glow: rgba(192,112,232,0.5);">Heena</div>
+      <div class="planet-subtitle">The Graceful Purple World</div>
+      <div class="planet-divider" style="background: linear-gradient(to right, #c070e8, transparent);"></div>
+      <div class="planet-description">
+        Planet Heena is the most aesthetically refined world in the system — its cities look like someone fed "luxury" into an AI and hit generate, but it actually turned out gorgeous. Its inhabitants are known for their encyclopedic memory, ability to remember every detail of every conversation ever, and their slightly terrifying gift of bringing it up at exactly the right moment. Also they invented glitter. The universe has not recovered.
+      </div>
+      <div class="planet-stats">
+        <div class="stat-item">
+          <span class="stat-label">Aesthetic</span>
+          <span class="stat-value" style="color:#c070e8;">Immaculate</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Glitter Exports</span>
+          <span class="stat-value" style="color:#c070e8;">Infinite</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="space-divider"><div class="divider-line"><div class="divider-star"></div></div></div>
+
+<!-- =================== FICTIONAL: ROHIT =================== -->
+<section class="planet-section" style="--glow-x:70%; --glow-y:50%; --glow-color:rgba(80,200,200,0.12);">
+  <div class="planet-content reverse" id="rohit-content">
+    <div class="planet-3d-wrapper">
+      <div class="planet-orbit-ring"></div>
+      <div class="planet-sphere" style="background: radial-gradient(circle at 40% 35%, #b0f0f8, #30c0d0 35%, #108090 65%, #044050); --planet-glow: rgba(40,180,200,0.5);"></div>
+    </div>
+    <div class="planet-info">
+      <div class="planet-number">Fictional Planet VI · Farthest</div>
+      <div class="planet-name" style="--planet-accent: #40c8d8; --planet-glow: rgba(64,200,216,0.5);">Rohit</div>
+      <div class="planet-subtitle">The Wise Outer World</div>
+      <div class="planet-divider" style="background: linear-gradient(to right, #40c8d8, transparent);"></div>
+      <div class="planet-description">
+        Being the farthest planet from the Aryan Star gives Rohit a rare superpower: perspective. Its inhabitants see the whole solar system at once and have been known to predict arguments between the other planets before they happen (and place bets on them). Rohit holds the system record for most unsolicited good advice and also runs a surprisingly popular podcast called "Things I Can See From Here." Currently on episode 4,712.
+      </div>
+      <div class="planet-stats">
+        <div class="stat-item">
+          <span class="stat-label">Wisdom Level</span>
+          <span class="stat-value" style="color:#40c8d8;">Peak</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Podcast Listeners</span>
+          <span class="stat-value" style="color:#40c8d8;">All Planets</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="space-divider"><div class="divider-line"><div class="divider-star"></div></div></div>
+
+<!-- =================== FICTIONAL SYSTEM OVERVIEW =================== -->
+<section id="fictional-system">
+  <div class="finale-title" id="finale-title">
+    ✦ Welcome to Aryan's Solar System ✦
+  </div>
+  <p style="color: rgba(180,160,220,0.7); font-size:0.9rem; letter-spacing:0.2em; text-transform:uppercase; margin-bottom:0.5rem; opacity:0; transition: opacity 1s ease 0.1s;" id="finale-sub" class="">A fictional universe where everyone has a personality</p>
+  <div class="fictional-canvas-wrap" id="fictional-canvas-wrap">
+    <canvas id="fictional-canvas"></canvas>
+  </div>
+  <div class="planet-legend" id="planet-legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#FFD700; box-shadow: 0 0 8px #FFD700;"></div> Aryan Star</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ff6090;"></div> Rajni</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#50a8ff;"></div> Rahul</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#50d870;"></div> Palav</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f0a030;"></div> Reynold</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#c070e8;"></div> Heena</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#40c8d8;"></div> Rohit</div>
+  </div>
+  <div class="welcome-text" id="welcome-text">
+    Made with love · For Aryan · And all his favourite people ✦
+  </div>
+</section>
+
+<div class="space-divider"><div class="divider-line"><div class="divider-star"></div></div></div>
+
+<!-- =================== STAR HOROSCOPE =================== -->
+<section id="horoscope">
+  <div class="horoscope-header" id="horo-header">
+    <div class="horoscope-eyebrow">✦ Cosmic Readings from the Aryan Star ✦</div>
+    <div class="horoscope-title">Star Horoscope</div>
+    <div class="horoscope-tagline">Choose your planetary sign to reveal today's cosmic truth (brutally accurate)</div>
+  </div>
+
+  <div class="sign-picker" id="sign-picker">
+    <button class="sign-btn" style="--btn-glow:rgba(255,80,140,0.18);--btn-border:rgba(255,80,140,0.5);--btn-color:#ff90b8;--btn-shadow:rgba(255,60,120,0.25);" data-sign="rajni" onclick="showHoro('rajni')">
+      <span class="sign-icon">🌋</span>Rajni's Anger
+    </button>
+    <button class="sign-btn" style="--btn-glow:rgba(100,220,130,0.18);--btn-border:rgba(100,220,130,0.5);--btn-color:#70e890;--btn-shadow:rgba(60,200,90,0.25);" data-sign="palav" onclick="showHoro('palav')">
+      <span class="sign-icon">🌿</span>Palav's Craziness
+    </button>
+    <button class="sign-btn" style="--btn-glow:rgba(255,140,40,0.18);--btn-border:rgba(255,140,40,0.5);--btn-color:#ffb060;--btn-shadow:rgba(240,120,20,0.25);" data-sign="reynold" onclick="showHoro('reynold')">
+      <span class="sign-icon">💔</span>Reynold's Broken Heart
+    </button>
+    <button class="sign-btn" style="--btn-glow:rgba(80,168,255,0.18);--btn-border:rgba(80,168,255,0.5);--btn-color:#80c8ff;--btn-shadow:rgba(50,140,255,0.25);" data-sign="rahul" onclick="showHoro('rahul')">
+      <span class="sign-icon">🪮</span>Rahul the Jhaat Guy
+    </button>
+    <button class="sign-btn" style="--btn-glow:rgba(200,110,240,0.18);--btn-border:rgba(200,110,240,0.5);--btn-color:#d890ff;--btn-shadow:rgba(180,80,240,0.25);" data-sign="heena" onclick="showHoro('heena')">
+      <span class="sign-icon">🎶</span>Heena's Sweet Voice
+    </button>
+    <button class="sign-btn" style="--btn-glow:rgba(60,200,220,0.18);--btn-border:rgba(60,200,220,0.5);--btn-color:#60d8e8;--btn-shadow:rgba(40,180,200,0.25);" data-sign="rohit" onclick="showHoro('rohit')">
+      <span class="sign-icon">🤦</span>Rohit's Mistakes
+    </button>
+  </div>
+
+  <div class="horoscope-card-wrap" id="horo-card-wrap">
+    <div class="horoscope-card" id="horo-card">
+      <div class="constellation-wrap">
+        <canvas id="const-canvas" width="80" height="80"></canvas>
+      </div>
+      <div class="card-top">
+        <div class="card-planet-orb" id="horo-orb"></div>
+        <div class="card-heading">
+          <div class="card-sign-name" id="horo-sign-name">—</div>
+          <div class="card-sign-sub" id="horo-sign-sub">Select a sign above</div>
+        </div>
+      </div>
+      <div class="horoscope-date" id="horo-date"></div>
+      <div class="horoscope-reading" id="horo-reading">
+        The stars are waiting for you to pick a sign. They have a lot to say. (Mostly embarrassing things.)
+      </div>
+      <div class="cosmic-meters" id="horo-meters"></div>
+      <div class="lucky-row" id="horo-lucky"></div>
+    </div>
+  </div>
+</section>
+
+<div style="height: 4rem;"></div>
+
+<script>
+// =================== HOROSCOPE DATA ===================
+const horoData = {
+  rajni: {
+    name: "Rajni's Anger",
+    sub: "Fire Sign · Closest to the Aryan Star",
+    color: '#ff6090',
+    glow: 'rgba(255,80,130,0.5)',
+    orb: 'radial-gradient(circle at 38% 32%, #ffb8d8, #ff6090 35%, #c02050 70%, #801030)',
+    cardGlow: 'rgba(255,60,120,0.25)',
+    accent: '#ff80a8',
+    reading: `The Aryan Star has sent you a cosmic warning this week: your temperature is rising, and even the nearest asteroid has filed a noise complaint. You woke up today ready to fight someone — specifically the person who replied "k" to your paragraph. The universe says: take three deep breaths. The Aryan Star (your personal sun, your reason for orbiting, your everything 🥹) has beamed you 47 rays of warmth today but you were too busy typing an angry text to notice. Lucky for you, Mercury is in the phase known as "she actually has a point though." Channel this volcanic energy into passion rather than destruction. Also please eat something. Angry on an empty stomach is a whole different sign.`,
+    meters: [
+      { label: 'Anger Level', val: 95 },
+      { label: 'Still Right Though', val: 90 },
+      { label: 'Likelihood of Forgiving', val: 40 },
+      { label: 'Love for Aryan Star', val: 100 },
+    ],
+    lucky: [
+      { label: 'Lucky Number', val: '🔥 3' },
+      { label: 'Lucky Colour', val: 'Rage Red' },
+      { label: 'Avoid', val: 'One-word replies' },
+      { label: 'Cosmic Advice', val: 'He noticed 💕' },
+    ]
+  },
+  palav: {
+    name: "Palav's Craziness",
+    sub: "Earth Sign · Lush & Unpredictable",
+    color: '#50d870',
+    glow: 'rgba(60,200,80,0.5)',
+    orb: 'radial-gradient(circle at 38% 32%, #c0ffd0, #40c860 35%, #208040 70%, #0a4020)',
+    cardGlow: 'rgba(40,180,60,0.2)',
+    accent: '#60e880',
+    reading: `The stars have reviewed your recent activity and respectfully have questions. You reorganised your room at 2am, started learning the ukulele, and also sent a 47-second voice note about a dream involving a talking cactus — all on the same Tuesday. Neptune confirms: this is completely normal for your sign. Your craziness is not a bug, it is the rarest feature in the galaxy. Today the cosmos recommends embracing the chaos — you'll have 3 brilliant ideas before lunch, only 1 of which will be genuinely dangerous. Your plant collection is also judging you but in a loving way. The universe says: your energy is the kind that makes boring planets interesting. Everyone secretly wants your life.`,
+    meters: [
+      { label: 'Chaos Energy', val: 88 },
+      { label: 'Brilliant Ideas/Day', val: 92 },
+      { label: 'Sensible Decisions', val: 22 },
+      { label: 'Vibes', val: 97 },
+    ],
+    lucky: [
+      { label: 'Lucky Number', val: '🌿 7' },
+      { label: 'Lucky Colour', val: 'Chaotic Green' },
+      { label: 'Avoid', val: 'Silence (impossible)' },
+      { label: 'Cosmic Advice', val: 'Own the crazy' },
+    ]
+  },
+  reynold: {
+    name: "Reynold's Broken Heart",
+    sub: "Fire Sign · Dramatically Suffering",
+    color: '#f0a030',
+    glow: 'rgba(230,150,40,0.5)',
+    orb: 'radial-gradient(circle at 38% 32%, #ffd890, #e08820 35%, #a04810 70%, #501800)',
+    cardGlow: 'rgba(220,140,30,0.2)',
+    accent: '#f0b040',
+    reading: `Mars weeps for you, Reynold. The cosmos has checked your playlist and it is 94% breakup songs and 6% "motivational" songs you skipped after 8 seconds. Your broken heart has been certified by the Galactic Bureau of Dramatic Suffering as a Grade A, Premium, Full-Coverage heartbreak — complete with staring at rain on windows and rehearsing arguments you'll never actually have. The good news: Venus is moving toward your quadrant this week, which astronomers call "a recovery window" and you will call "a coincidence I'm not ready for." Take comfort: even the greatest stars collapse before they become something more beautiful. Your sunset today will last extra long. The universe owes you that much.`,
+    meters: [
+      { label: 'Heartbreak Intensity', val: 91 },
+      { label: 'Playlist Sadness %', val: 94 },
+      { label: 'Readiness to Move On', val: 18 },
+      { label: 'Dramatic Potential', val: 99 },
+    ],
+    lucky: [
+      { label: 'Lucky Number', val: '💔 2 (was 2)' },
+      { label: 'Lucky Colour', val: 'Amber Dusk' },
+      { label: 'Avoid', val: 'Their Instagram' },
+      { label: 'Cosmic Advice', val: 'You deserve more' },
+    ]
+  },
+  rahul: {
+    name: "Rahul the Jhaat Guy",
+    sub: "Air Sign · Aggressively Unbothered",
+    color: '#50a8ff',
+    glow: 'rgba(60,140,255,0.5)',
+    orb: 'radial-gradient(circle at 38% 32%, #a0d0ff, #3088e0 35%, #1050b0 70%, #082050)',
+    cardGlow: 'rgba(50,120,240,0.2)',
+    accent: '#60b8ff',
+    reading: `The cosmos has been trying to reach you regarding your energy. Jupiter confirms: you said "it's fine" approximately 34 times this week when it was, in fact, not fine — but somehow everything worked out anyway? Scientists studying your sign call this "Rahul's Law of Accidental Outcomes." You thrive on doing the bare minimum and somehow still being the person everyone calls when things go sideways. Today, the stars recommend: do absolutely nothing for 25 minutes. You'll call it laziness. The universe calls it recharging. Your vibe is contagious (the good kind) and the Jhaat energy — that rare mix of "I don't care" and "but also I kind of do" — is a cosmic gift that lesser planets cannot comprehend. Respect.`,
+    meters: [
+      { label: 'Chill Level', val: 96 },
+      { label: 'Times Said "It\'s Fine"', val: 88 },
+      { label: 'Effort Given', val: 35 },
+      { label: 'Outcome Quality', val: 82 },
+    ],
+    lucky: [
+      { label: 'Lucky Number', val: '🪮 0 (zero effort)' },
+      { label: 'Lucky Colour', val: 'Chill Blue' },
+      { label: 'Avoid', val: 'Urgency' },
+      { label: 'Cosmic Advice', val: 'Works out anyway' },
+    ]
+  },
+  heena: {
+    name: "Heena's Sweet Voice",
+    sub: "Air Sign · Melodically Powerful",
+    color: '#c070e8',
+    glow: 'rgba(180,80,220,0.5)',
+    orb: 'radial-gradient(circle at 38% 32%, #f0c8ff, #c060e0 35%, #8030c0 70%, #401080)',
+    cardGlow: 'rgba(160,60,220,0.2)',
+    accent: '#d088f0',
+    reading: `The universe has been listening to you and has submitted a formal request for an encore. Your voice carries a frequency that the Aryan Star's scientists have classified as "dangerously soothing" — capable of resolving arguments, calming storms, and making people forget what they were upset about mid-sentence. This week, Mercury (planet of communication) is taking notes from you specifically. People hear you and immediately want to be better. That's not a soft power — that's a superpower wrapped in kindness. The stars warn: don't let anyone confuse your sweetness for weakness. There's more precision in your gentleness than in most people's loudest moments. Also — people remember everything you've ever said. Everything. Use it wisely.`,
+    meters: [
+      { label: 'Voice Sweetness', val: 98 },
+      { label: 'People Calmed Today', val: 85 },
+      { label: 'Hidden Power Level', val: 93 },
+      { label: 'Memory of Others', val: 100 },
+    ],
+    lucky: [
+      { label: 'Lucky Number', val: '🎶 8' },
+      { label: 'Lucky Colour', val: 'Soft Violet' },
+      { label: 'Avoid', val: 'Silence (waste)' },
+      { label: 'Cosmic Advice', val: 'Keep speaking' },
+    ]
+  },
+  rohit: {
+    name: "Rohit's Mistakes",
+    sub: "Water Sign · Wisely Chaotic",
+    color: '#40c8d8',
+    glow: 'rgba(40,180,200,0.5)',
+    orb: 'radial-gradient(circle at 38% 32%, #b0f0f8, #30c0d0 35%, #108090 70%, #044050)',
+    cardGlow: 'rgba(30,170,190,0.2)',
+    accent: '#50d0e0',
+    reading: `The stars have reviewed the full archive of your decisions and have prepared a report. It is... long. Rohit, you have made more mistakes than the average planet — but here is the cosmic truth that the Aryan Star whispered across 290 million light-years: every single one of your mistakes has a lesson embedded in it like a fossil in rock. You have accidentally become the wisest person in the room by simply doing things wrong first. This week, Saturn (planet of consequences and "I told you so") is actually applauding you. The distance from the Aryan Star gives you perspective that others lack. You can see the whole pattern. You know what's coming. Your podcast has more listeners than you think. Also — stop overthinking the thing you did in 2019. Everyone has forgotten. Except you. Let it go.`,
+    meters: [
+      { label: 'Mistake Archive Size', val: 87 },
+      { label: 'Wisdom Earned', val: 91 },
+      { label: 'Overthinking Level', val: 94 },
+      { label: 'Actual Growth', val: 88 },
+    ],
+    lucky: [
+      { label: 'Lucky Number', val: '🤦 404 (not found)' },
+      { label: 'Lucky Colour', val: 'Deep Teal' },
+      { label: 'Avoid', val: 'Regret spirals' },
+      { label: 'Cosmic Advice', val: 'You\'re wiser now' },
+    ]
+  }
+};
+
+let currentSign = null;
+
+function showHoro(sign) {
+  const d = horoData[sign];
+  currentSign = sign;
+
+  // Update active button
+  document.querySelectorAll('.sign-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`[data-sign="${sign}"]`).classList.add('active');
+
+  // Update card content
+  document.getElementById('horo-orb').style.background = d.orb;
+  document.getElementById('horo-orb').style.setProperty('--orb-glow', d.glow);
+  document.getElementById('horo-sign-name').textContent = d.name;
+  document.getElementById('horo-sign-name').style.color = d.accent;
+  document.getElementById('horo-sign-sub').textContent = d.sub;
+  document.getElementById('horo-card').style.setProperty('--card-glow', d.cardGlow);
+  document.getElementById('horo-card').style.setProperty('--card-accent', d.accent);
+  document.getElementById('horo-card').style.borderColor = d.color.replace(')', ', 0.35)').replace('rgb(','rgba(') || `${d.color}55`;
+
+  // Date
+  const now = new Date();
+  document.getElementById('horo-date').textContent = `Cosmic reading · ${now.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}`;
+
+  // Reading with typewriter effect
+  const readingEl = document.getElementById('horo-reading');
+  readingEl.textContent = '';
+  let i = 0;
+  const text = d.reading;
+  function typeChar() {
+    if (i < text.length) {
+      readingEl.textContent += text[i++];
+      setTimeout(typeChar, 12);
+    }
+  }
+  typeChar();
+
+  // Meters
+  const metersEl = document.getElementById('horo-meters');
+  metersEl.innerHTML = d.meters.map(m => `
+    <div class="meter-row">
+      <div class="meter-label">${m.label}</div>
+      <div class="meter-bar-bg"><div class="meter-bar-fill" style="width:0%" data-target="${m.val}"></div></div>
+    </div>`).join('');
+
+  // Lucky row
+  document.getElementById('horo-lucky').innerHTML = d.lucky.map(l => `
+    <div class="lucky-item">
+      <div class="lucky-label">${l.label}</div>
+      <div class="lucky-value">${l.val}</div>
+    </div>`).join('');
+
+  // Reveal card
+  const wrap = document.getElementById('horo-card-wrap');
+  wrap.classList.remove('revealed');
+  setTimeout(() => {
+    wrap.classList.add('revealed');
+    // Animate bars after reveal
+    setTimeout(() => {
+      document.querySelectorAll('.meter-bar-fill').forEach(bar => {
+        bar.style.width = bar.dataset.target + '%';
+      });
+    }, 200);
+  }, 50);
+
+  // Draw constellation
+  drawConstellation(sign);
+}
+
+// ===================== CONSTELLATION DRAWING =====================
+const constellations = {
+  rajni:   [[10,60],[30,40],[50,55],[65,25],[80,10]],
+  palav:   [[15,15],[35,50],[20,70],[55,65],[75,30],[65,10]],
+  reynold: [[10,30],[40,10],[70,30],[40,70],[10,30]],
+  rahul:   [[40,5],[75,60],[10,60],[40,5]],
+  heena:   [[40,5],[65,25],[55,65],[25,65],[15,25],[40,5]],
+  rohit:   [[20,10],[60,10],[80,50],[60,80],[20,80],[5,50],[20,10]],
+};
+
+function drawConstellation(sign) {
+  const cnv = document.getElementById('const-canvas');
+  const ctx2 = cnv.getContext('2d');
+  ctx2.clearRect(0, 0, 80, 80);
+  const pts = constellations[sign] || [];
+  const col = horoData[sign].color;
+
+  // Lines
+  ctx2.strokeStyle = col.replace(')', ', 0.4)').replace('rgb(','rgba(') || col + '66';
+  ctx2.lineWidth = 0.8;
+  ctx2.beginPath();
+  pts.forEach((p, i) => i === 0 ? ctx2.moveTo(p[0], p[1]) : ctx2.lineTo(p[0], p[1]));
+  ctx2.stroke();
+
+  // Stars
+  pts.forEach(p => {
+    ctx2.beginPath();
+    ctx2.arc(p[0], p[1], 2.5, 0, Math.PI * 2);
+    ctx2.fillStyle = col;
+    ctx2.fill();
+  });
+}
+
+// =================== CURSOR ===================
+const cursor = document.getElementById('cursor');
+const trail = document.getElementById('cursor-trail');
+let mx = 0, my = 0;
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursor.style.left = (mx - 6) + 'px';
+  cursor.style.top = (my - 6) + 'px';
+  setTimeout(() => {
+    trail.style.left = (mx - 15) + 'px';
+    trail.style.top = (my - 15) + 'px';
+  }, 80);
+});
+
+// =================== STAR FIELD ===================
+const starsCanvas = document.getElementById('stars-canvas');
+const sctx = starsCanvas.getContext('2d');
+starsCanvas.width = window.innerWidth;
+starsCanvas.height = window.innerHeight;
+
+const stars = [];
+for (let i = 0; i < 300; i++) {
+  stars.push({
+    x: Math.random() * starsCanvas.width,
+    y: Math.random() * starsCanvas.height,
+    r: Math.random() * 1.5 + 0.2,
+    alpha: Math.random(),
+    speed: Math.random() * 0.5 + 0.1,
+    twinkleOffset: Math.random() * Math.PI * 2
+  });
+}
+
+function drawStars(t) {
+  sctx.clearRect(0, 0, starsCanvas.width, starsCanvas.height);
+  stars.forEach(s => {
+    const a = 0.3 + 0.7 * Math.abs(Math.sin(t * s.speed + s.twinkleOffset));
+    sctx.beginPath();
+    sctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    sctx.fillStyle = `rgba(255,255,255,${a})`;
+    sctx.fill();
+  });
+}
+
+// =================== SOLAR SYSTEM ANIMATION ===================
+const solarCanvas = document.getElementById('solar-canvas');
+const ctx = solarCanvas.getContext('2d');
+solarCanvas.width = window.innerWidth;
+solarCanvas.height = window.innerHeight;
+
+const cx = solarCanvas.width / 2;
+const cy = solarCanvas.height / 2;
+
+const planets = [
+  { name:'Mercury', r:5, dist:80, speed:0.047, color:'#b09070', trailColor:'rgba(176,144,112,0.4)' },
+  { name:'Venus',   r:9, dist:120, speed:0.035, color:'#e8c050', trailColor:'rgba(232,192,80,0.4)' },
+  { name:'Earth',   r:10, dist:165, speed:0.028, color:'#4488dd', trailColor:'rgba(68,136,221,0.4)' },
+  { name:'Mars',    r:7, dist:210, speed:0.024, color:'#dd5533', trailColor:'rgba(221,85,51,0.4)' },
+  { name:'Jupiter', r:22, dist:280, speed:0.013, color:'#c8a870', trailColor:'rgba(200,168,112,0.4)' },
+  { name:'Saturn',  r:18, dist:350, speed:0.009, color:'#d4c090', trailColor:'rgba(212,192,144,0.4)' },
+  { name:'Uranus',  r:13, dist:410, speed:0.006, color:'#70d0d8', trailColor:'rgba(112,208,216,0.4)' },
+  { name:'Neptune', r:12, dist:460, speed:0.005, color:'#3060d8', trailColor:'rgba(48,96,216,0.4)' },
+];
+
+// Initialize angles
+planets.forEach((p, i) => p.angle = (i / planets.length) * Math.PI * 2);
+
+// Trail buffers
+planets.forEach(p => p.trail = []);
+
+let animT = 0;
+function animateSolar() {
+  ctx.clearRect(0, 0, solarCanvas.width, solarCanvas.height);
+  animT += 0.01;
+
+  // Draw orbit rings
+  planets.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, p.dist, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  });
+
+  // Sun glow
+  const sunGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 50);
+  sunGrad.addColorStop(0, 'rgba(255,255,200,1)');
+  sunGrad.addColorStop(0.4, 'rgba(255,200,0,0.9)');
+  sunGrad.addColorStop(0.7, 'rgba(255,120,0,0.6)');
+  sunGrad.addColorStop(1, 'rgba(255,60,0,0)');
+  ctx.beginPath();
+  ctx.arc(cx, cy, 50, 0, Math.PI * 2);
+  ctx.fillStyle = sunGrad;
+  ctx.fill();
+
+  // Corona flares
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2 + animT * 0.3;
+    const len = 30 + Math.sin(animT * 2 + i) * 15;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+    const flareGrad = ctx.createLinearGradient(40, 0, 40 + len, 0);
+    flareGrad.addColorStop(0, 'rgba(255,200,0,0.6)');
+    flareGrad.addColorStop(1, 'rgba(255,100,0,0)');
+    ctx.beginPath();
+    ctx.moveTo(42, -3);
+    ctx.lineTo(42 + len, 0);
+    ctx.lineTo(42, 3);
+    ctx.closePath();
+    ctx.fillStyle = flareGrad;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Draw planets
+  planets.forEach(p => {
+    p.angle += p.speed * 0.01;
+    const px = cx + Math.cos(p.angle) * p.dist;
+    const py = cy + Math.sin(p.angle) * p.dist;
+
+    // Trail
+    p.trail.push({ x: px, y: py });
+    if (p.trail.length > 40) p.trail.shift();
+    for (let i = 1; i < p.trail.length; i++) {
+      const a = i / p.trail.length * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(p.trail[i-1].x, p.trail[i-1].y);
+      ctx.lineTo(p.trail[i].x, p.trail[i].y);
+      ctx.strokeStyle = p.trailColor.replace('0.4)', `${a})`);
+      ctx.lineWidth = p.r * 0.3 * (i / p.trail.length);
+      ctx.stroke();
+    }
+
+    // Glow
+    const glow = ctx.createRadialGradient(px, py, 0, px, py, p.r * 2.5);
+    glow.addColorStop(0, p.color);
+    glow.addColorStop(1, 'transparent');
+    ctx.beginPath();
+    ctx.arc(px, py, p.r * 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = glow;
+    ctx.fill();
+
+    // Planet
+    ctx.beginPath();
+    ctx.arc(px, py, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = p.color;
+    ctx.fill();
+
+    // Highlight
+    ctx.beginPath();
+    ctx.arc(px - p.r * 0.3, py - p.r * 0.35, p.r * 0.35, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fill();
+
+    // Saturn ring
+    if (p.name === 'Saturn') {
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.scale(1, 0.3);
+      ctx.beginPath();
+      ctx.arc(0, 0, p.r + 10, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(212,192,144,0.5)';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      ctx.restore();
+    }
+  });
+
+  drawStars(animT);
+  requestAnimationFrame(animateSolar);
+}
+animateSolar();
+
+// =================== FICTIONAL SOLAR SYSTEM ===================
+const fc = document.getElementById('fictional-canvas');
+const fctx = fc.getContext('2d');
+
+function resizeFc() {
+  fc.width = fc.offsetWidth;
+  fc.height = fc.offsetHeight;
+}
+resizeFc();
+
+const fictPlanets = [
+  { name:'Rajni',   r:10, dist:60,  speed:0.035, color:'#ff6090', angle:0 },
+  { name:'Rahul',   r:12, dist:105, speed:0.028, color:'#50a8ff', angle:1 },
+  { name:'Palav',   r:11, dist:150, speed:0.022, color:'#50d870', angle:2 },
+  { name:'Reynold', r:14, dist:198, speed:0.016, color:'#f0a030', angle:3 },
+  { name:'Heena',   r:13, dist:245, speed:0.010, color:'#c070e8', angle:4 },
+  { name:'Rohit',   r:12, dist:290, speed:0.007, color:'#40c8d8', angle:5 },
+];
+fictPlanets.forEach(p => p.trail = []);
+
+let fT = 0;
+function animateFictional() {
+  if (!fc.width) { requestAnimationFrame(animateFictional); return; }
+  fctx.clearRect(0, 0, fc.width, fc.height);
+  fT += 0.01;
+  const fcx = fc.width / 2, fcy = fc.height / 2;
+
+  // Stars inside fictional system
+  for (let i = 0; i < 60; i++) {
+    const sx = (Math.sin(i * 567.8 + fT * 0.05) * 0.5 + 0.5) * fc.width;
+    const sy = (Math.cos(i * 345.2 + fT * 0.03) * 0.5 + 0.5) * fc.height;
+    const sa = 0.2 + 0.5 * Math.abs(Math.sin(fT + i));
+    fctx.beginPath();
+    fctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+    fctx.fillStyle = `rgba(255,255,255,${sa})`;
+    fctx.fill();
+  }
+
+  // Orbits
+  fictPlanets.forEach(p => {
+    fctx.beginPath();
+    fctx.arc(fcx, fcy, p.dist, 0, Math.PI * 2);
+    fctx.strokeStyle = 'rgba(255,255,255,0.07)';
+    fctx.lineWidth = 1;
+    fctx.stroke();
+  });
+
+  // Aryan Star
+  const sG = fctx.createRadialGradient(fcx, fcy, 0, fcx, fcy, 35);
+  sG.addColorStop(0, '#fff7aa');
+  sG.addColorStop(0.5, '#FFD700');
+  sG.addColorStop(0.8, '#FF8C00');
+  sG.addColorStop(1, 'rgba(255,60,0,0)');
+  fctx.beginPath();
+  fctx.arc(fcx, fcy, 35, 0, Math.PI * 2);
+  fctx.fillStyle = sG;
+  fctx.fill();
+
+  // Corona
+  const pulseSize = 35 + 8 * Math.sin(fT * 2);
+  const coronaG = fctx.createRadialGradient(fcx, fcy, 30, fcx, fcy, pulseSize + 15);
+  coronaG.addColorStop(0, 'rgba(255,200,0,0.4)');
+  coronaG.addColorStop(1, 'rgba(255,100,0,0)');
+  fctx.beginPath();
+  fctx.arc(fcx, fcy, pulseSize + 15, 0, Math.PI * 2);
+  fctx.fillStyle = coronaG;
+  fctx.fill();
+
+  // Star label
+  fctx.fillStyle = 'rgba(255,220,80,0.9)';
+  fctx.font = 'bold 10px Orbitron, monospace';
+  fctx.textAlign = 'center';
+  fctx.fillText('ARYAN STAR', fcx, fcy - 42);
+
+  // Fictional planets
+  fictPlanets.forEach(p => {
+    p.angle += p.speed * 0.01;
+    const px = fcx + Math.cos(p.angle) * p.dist;
+    const py = fcy + Math.sin(p.angle) * p.dist;
+
+    p.trail.push({ x: px, y: py });
+    if (p.trail.length > 30) p.trail.shift();
+
+    for (let i = 1; i < p.trail.length; i++) {
+      const a = (i / p.trail.length) * 0.3;
+      fctx.beginPath();
+      fctx.moveTo(p.trail[i-1].x, p.trail[i-1].y);
+      fctx.lineTo(p.trail[i].x, p.trail[i].y);
+      fctx.strokeStyle = p.color.replace(')', `, ${a})`).replace('rgb(','rgba(');
+      fctx.lineWidth = 2;
+      fctx.stroke();
+    }
+
+    const pG = fctx.createRadialGradient(px, py, 0, px, py, p.r * 2);
+    pG.addColorStop(0, p.color);
+    pG.addColorStop(1, 'transparent');
+    fctx.beginPath();
+    fctx.arc(px, py, p.r * 2, 0, Math.PI * 2);
+    fctx.fillStyle = pG;
+    fctx.fill();
+
+    fctx.beginPath();
+    fctx.arc(px, py, p.r, 0, Math.PI * 2);
+    fctx.fillStyle = p.color;
+    fctx.fill();
+
+    fctx.beginPath();
+    fctx.arc(px - p.r * 0.3, py - p.r * 0.3, p.r * 0.35, 0, Math.PI * 2);
+    fctx.fillStyle = 'rgba(255,255,255,0.5)';
+    fctx.fill();
+
+    // Label
+    fctx.fillStyle = 'rgba(255,255,255,0.7)';
+    fctx.font = '9px Orbitron, monospace';
+    fctx.textAlign = 'center';
+    fctx.fillText(p.name, px, py + p.r + 12);
+  });
+
+  requestAnimationFrame(animateFictional);
+}
+animateFictional();
+
+// =================== SCROLL ANIMATIONS ===================
+const observerOptions = { threshold: 0.25 };
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, observerOptions);
+
+const animTargets = [
+  'mercury-content', 'venus-content', 'earth-content', 'mars-content',
+  'jupiter-content', 'saturn-content', 'uranus-content', 'neptune-content',
+  'aryan-content', 'rajni-content', 'rahul-content', 'palav-content',
+  'reynold-content', 'heena-content', 'rohit-content',
+  'finale-title', 'fictional-canvas-wrap', 'planet-legend', 'welcome-text',
+  'horo-header', 'sign-picker'
+];
+animTargets.forEach(id => {
+  const el = document.getElementById(id);
+  if (el) observer.observe(el);
+});
+
+// Finale sub
+const finaleSub = document.getElementById('finale-sub');
+if (finaleSub) observer.observe(finaleSub);
+
+// =================== RESIZE ===================
+window.addEventListener('resize', () => {
+  starsCanvas.width = window.innerWidth;
+  starsCanvas.height = window.innerHeight;
+  solarCanvas.width = window.innerWidth;
+  solarCanvas.height = window.innerHeight;
+  resizeFc();
+});
+</script>
+</body>
+</html>
